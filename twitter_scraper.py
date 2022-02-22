@@ -1,12 +1,10 @@
 '''
 twitter_Scraper version 1.0
+Selenium-based webscraper for twitter
 
 Thomas Mcinally tuesday 22/02/2022 (two's day!)
 
 This module allows you to grab all latest tweets that match a specified search term, since a specified time
-
-
-
 
 
 TODO (next version):
