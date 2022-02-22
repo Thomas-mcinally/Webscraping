@@ -1,33 +1,45 @@
 '''
-Version 0.1
+twitter_Scraper version 1.0
 
-GOAL: Be able to grab all tweets that mention a specified hashtag, in a specified period of time
+Thomas Mcinally tuesday 22/02/2022 (two's day!)
+
+This module allows you to grab all latest tweets that match a specified search term, since a specified time
 
 
 
-Still buggy. TODO:
--Make sure it doesnt skip tweets
--Account for end of document
--Enable specifying time period
 
+
+TODO (next version):
+-Add language filter option 
+-Add option to limit nr. of tweets to fetch
 
 '''
+#######################  INPUTS  #############################
+search_term = '#nyancat'
+since = '2022-02-22T00:00:00.000Z'
+
+twitter_username = 'YOUR_EMAIL'
+twitter_handle = 'YOUR_HANDLE' #used if twitter asks to verify identity with handle/phone number
+twitter_password = 'YOUR_PASSWORD'
+##############################################################
 
 
-import csv
-from getpass import getpass
+
+import pandas as pd
 from time import sleep
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver import Chrome
 
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from datetime import datetime, timedelta
 
 import os
 if ';C:\selenium_drivers' not in os.environ['PATH']:
     os.environ['PATH'] += r';C:\selenium_drivers'
+
+#reformat date input from str to datetime
+earliest_date = datetime.strptime(since, "%Y-%m-%dT%H:%M:%S.%fZ")
 
 def get_tweet_data(card):
     ''' Extract data from tweet card'''
@@ -47,76 +59,91 @@ def get_tweet_data(card):
     tweet = (postdate, handle, username, text, reply_cnt, retweet_cnt, like_cnt)
     return tweet
 
-#open browser, navigate to twitter and log in
+
+##open browser, maximize window and zoom out to 33%
 driver = Chrome()
 driver.maximize_window()
 sleep(3)
+driver.get('chrome://settings/')
+driver.execute_script('chrome.settingsPrivate.setDefaultZoom(0.33);')
+sleep(3)
 
+
+##navigate to twitter, login and search for search term
 driver.get('https://twitter.com/login')
 sleep(3)
-
 username = driver.find_element(By.XPATH,'/html/body/div/div/div/div[1]/div/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div/div[5]/label/div/div[2]/div/input')
-username.send_keys('USERNAME')
+username.send_keys(twitter_username)
 username.send_keys(Keys.RETURN)
 sleep(3)
-
+#need this if promted to verify identity. Comment out if not
 verify_username = driver.find_element(By.XPATH, '//*[@id="layers"]/div/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div/div[2]/label/div/div[2]/div/input')
-verify_username.send_keys('HANDLE')
+verify_username.send_keys(twitter_handle)
 verify_username.send_keys(Keys.RETURN)
 sleep(3)
-
 password = driver.find_element(By.XPATH, '//*[@id="layers"]/div/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div/div[3]/div/label/div/div[2]/div[1]/input')
-password.send_keys('PASSWORD')
+password.send_keys(twitter_password)
 password.send_keys(Keys.RETURN)
 sleep(3)
-
 #search for key word
 search_input = driver.find_element(By.XPATH, '/html/body/div[1]/div/div/div[2]/main/div/div/div/div[2]/div/div[2]/div/div/div/div[1]/div/div/div/form/div[1]/div/div/label/div[2]/div/input')
-search_input.send_keys('#nyancat')
+search_input.send_keys(search_term)
 search_input.send_keys(Keys.RETURN)
 sleep(3)
-
 #navigate to latest tweets tab
-driver.find_element_by_link_text('Latest').click()
+#driver.find_element(By.XPATH, '/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/div[1]/div[2]/nav/div/div[2]/div/div[2]/a/div/span').click() # Doesnt work when zoomed out
+webElement = driver.find_element(By.XPATH, ("/html/body/div[1]/div/div/div[2]/main/div/div/div/div[1]/div/div[1]/div[2]/nav/div/div[2]/div/div[2]/a/div/span"))
+driver.execute_script("arguments[0].click()", webElement) #workaround, works when zoomed out
 sleep(3)
 
 
-
-
-#grab all available tweets
-
+##grab all available tweets
 data = []
 tweet_ids = set() #prevent scraping same tweet multiple times
 last_position = driver.execute_script("return document.body.scrollHeight")
 scrolling = True
 
-
-
-while len(data)<20:
+while scrolling:
     page_cards = driver.find_elements(By.XPATH, '//article[@data-testid="tweet"]')
     print('grabbing latest cards')
-    for card in page_cards:#[-20:]:
+    for card in page_cards:
         tweet = get_tweet_data(card)
         if tweet:
-            tweet_id = tweet[0]+tweet[1] #concatenate handle and datetime to create unique identifier for tweet
-            if tweet_id not in tweet_ids:
-                tweet_ids.add(tweet_id)
-                data.append(tweet)
+            if (datetime.strptime(tweet[0], "%Y-%m-%dT%H:%M:%S.%fZ") > earliest_date):
+                tweet_id = tweet[0]+tweet[1] #concatenate handle and datetime to create unique identifier for tweet
+                if tweet_id not in tweet_ids:
+                    tweet_ids.add(tweet_id)
+                    data.append(tweet)
+                    print(tweet)
+            else:
+                print('Earliest tweet day reached, ending search...')
+                scrolling = False #end outer while loop
+                break #break out of for loop
 
-
-
-
+#Scroll down on webpage to load new tweets
     scroll_attempt = 0
-    while (datetime.strptime(data[-1][0], "%Y-%m-%dT%H:%M:%S.%fZ") > datetime.now()-timedelta(days=7)):
+    while True:
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         sleep(5)
         current_position = driver.execute_script("return document.body.scrollHeight")
         if last_position == current_position:  
             scroll_attempt +=1
-            print('scroll failed, trying again')
-            sleep(5)
+
+            if scroll_attempt >= 3: 
+                print('maximum nr. of failed scrolls reached, ending search...')  
+                scrolling = False #ending outer while loop
+                break #break out of current while loop
+            else:
+                sleep(3) #attempt to scroll again
 
         else:
+            print('scrolled successfully')
             last_position = current_position
-            break
-            
+            break #break out of current while loop and scrape new tweets
+
+
+##Save tweets to csv
+df = pd.DataFrame(data, columns=('postdate', 'handle', 'username', 'text', 'reply_cnt', 'retweet_cnt', 'like_cnt'))
+csv_path = search_term+'_tweets_after_'+since[:10].replace('-','_')+'.csv'
+print('Scraping done. Saving tweets in '+csv_path)
+df.to_csv(csv_path, index=False, header=True)
