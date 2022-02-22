@@ -1,20 +1,23 @@
 '''
-twitter_Scraper version 1.0
-Selenium-based webscraper for twitter
+selenium_twitter_scraper version 2.0
 
 Thomas Mcinally tuesday 22/02/2022 (two's day!)
 
-This module allows you to grab all latest tweets that match a specified search term, since a specified time
+This module allows you to scrape all latest tweets by specifying:
+- Search term
+- Date to look for tweets since
+- Limit on nr. of tweets to scrape (gets most recent ones first)
+
 
 
 TODO (next version):
 -Add language filter option 
--Add option to limit nr. of tweets to fetch
 
 '''
 #######################  INPUTS  #############################
-search_term = '#nyancat'
-since = '2022-02-22T00:00:00.000Z'
+search_term = '#nyancat' #str
+since = '2022-02-22T00:00:00.000Z' #str e.g.'2000-01-01T00:00:00.000Z'
+limit = 5  #int
 
 twitter_username = 'YOUR_EMAIL'
 twitter_handle = 'YOUR_HANDLE' #used if twitter asks to verify identity with handle/phone number
@@ -107,14 +110,19 @@ while scrolling:
     for card in page_cards:
         tweet = get_tweet_data(card)
         if tweet:
-            if (datetime.strptime(tweet[0], "%Y-%m-%dT%H:%M:%S.%fZ") > earliest_date):
-                tweet_id = tweet[0]+tweet[1] #concatenate handle and datetime to create unique identifier for tweet
-                if tweet_id not in tweet_ids:
-                    tweet_ids.add(tweet_id)
-                    data.append(tweet)
-                    print(tweet)
+            if (len(data)<limit):
+                if (datetime.strptime(tweet[0], "%Y-%m-%dT%H:%M:%S.%fZ") > earliest_date):
+                    tweet_id = tweet[0]+tweet[1] #concatenate handle and datetime to create unique identifier for tweet
+                    if tweet_id not in tweet_ids:
+                        tweet_ids.add(tweet_id)
+                        data.append(tweet)
+                        print(tweet)
+                else:
+                    print('Earliest tweet day reached, ending search...')
+                    scrolling = False #end outer while loop
+                    break #break out of for loop
             else:
-                print('Earliest tweet day reached, ending search...')
+                print('Nr. of scraped tweets reached limit, ending search...')
                 scrolling = False #end outer while loop
                 break #break out of for loop
 
@@ -135,13 +143,12 @@ while scrolling:
                 sleep(3) #attempt to scroll again
 
         else:
-            print('scrolled successfully')
             last_position = current_position
             break #break out of current while loop and scrape new tweets
 
 
 ##Save tweets to csv
 df = pd.DataFrame(data, columns=('postdate', 'handle', 'username', 'text', 'reply_cnt', 'retweet_cnt', 'like_cnt'))
-csv_path = search_term+'_tweets_after_'+since[:10].replace('-','_')+'.csv'
+csv_path = search_term+'_tweets_after_'+since.replace('-','_').replace(':','_').replace('.','_')+'.csv'
 print('Scraping done. Saving tweets in '+csv_path)
 df.to_csv(csv_path, index=False, header=True)
