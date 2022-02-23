@@ -1,12 +1,12 @@
 '''
-selenium_twitter_scraper version 3.0
+selenium_twitter_scraper version 4.0
 
 Thomas Mcinally tuesday 22/02/2022 (two's day!)
 
 This module allows you to scrape all latest tweets by specifying:
 - Search term
 - Date to look for tweets since
-- Nr. of tweets to scrape (gets most recent ones first)
+- Number of tweets to scrape (gets most recent ones first)
 - Language (english or all languages)
 
 '''
@@ -16,31 +16,36 @@ since = '2022-02-20T00:00:00.000Z' #str e.g.'2000-01-01T00:00:00.000Z'
 limit = 20  #int
 only_english = True #bool
 
-twitter_username = 'YOUR_EMAIL'
-twitter_handle = 'YOUR_HANDLE' #used if twitter asks to verify identity with handle/phone number
-twitter_password = 'YOUR_PASSWORD'
+twitter_username = 'YOUR EMAIL'
+twitter_handle = 'YOUR HANDLE' #used if twitter asks to verify identity with handle/phone number
+twitter_password = 'YOUR PASSWORD'
 ##############################################################
 
 
-
+import os
 import pandas as pd
 from time import sleep
-from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver import Chrome
-
-from selenium.webdriver.common.by import By
+from typing import Tuple
 from datetime import datetime, timedelta
 
-import os
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver import Chrome
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.remote.webelement import WebElement
+
+#make sure selenium_driver is in PATH
 if ';C:\selenium_drivers' not in os.environ['PATH']:
     os.environ['PATH'] += r';C:\selenium_drivers'
 
 #reformat date input from str to datetime
 earliest_date = datetime.strptime(since, "%Y-%m-%dT%H:%M:%S.%fZ")
 
-def get_tweet_data(card):
-    ''' Extract data from tweet card'''
+
+tweet_ids = set() #prevent scraping same tweet multiple times
+
+def get_tweet_data(card: WebElement) -> Tuple[tuple, str]:
+    '''Extract data from tweet card'''
     username = card.find_element(By.XPATH, './/span').text
     handle = card.find_element(By.XPATH, './/span[contains(text(), "@")]').text
     try:
@@ -55,7 +60,25 @@ def get_tweet_data(card):
     like_cnt = card.find_element(By.XPATH, './/div[@data-testid="like"]').text
 
     tweet = (postdate, handle, username, text, reply_cnt, retweet_cnt, like_cnt)
-    return tweet
+    tweet_id = tweet[0]+tweet[1] #concatenate handle and datetime to create unique identifier for tweet
+
+    #only return tweets that are correct language and not already scraped
+    if only_english:
+        if text.isascii():
+            if tweet_id not in tweet_ids:
+                tweet_ids.add(tweet_id)
+                return tweet
+            else: 
+                return False
+        else:
+            return False
+
+    else:
+        if tweet_id not in tweet_ids:
+            tweet_ids.add(tweet_id)
+            return tweet
+        else:
+            return False
 
 
 ##open browser, maximize window and zoom out to 33%
@@ -97,51 +120,28 @@ sleep(3)
 
 ##grab all available tweets
 data = []
-tweet_ids = set() #prevent scraping same tweet multiple times
 last_position = driver.execute_script("return document.body.scrollHeight")
 scrolling = True
 
 while scrolling:
     page_cards = driver.find_elements(By.XPATH, '//article[@data-testid="tweet"]')
-    print('Grabbing latest cards...')
+    print('Grabbing new tweets...')
     for card in page_cards:
-        tweet = get_tweet_data(card)
+        tweet=get_tweet_data(card) #returns visible tweets that are correct language and not already scraped
         if tweet:
-            if only_english:
-                if tweet[3].isascii():
-                    if (len(data)<limit):
-                        if (datetime.strptime(tweet[0], "%Y-%m-%dT%H:%M:%S.%fZ") > earliest_date):
-                            tweet_id = tweet[0]+tweet[1] #concatenate handle and datetime to create unique identifier for tweet
-                            if tweet_id not in tweet_ids:
-                                tweet_ids.add(tweet_id)
-                                data.append(tweet)
-                                print(tweet)
-                        else:
-                            print('Earliest tweet day reached, ending search...')
-                            scrolling = False #end outer while loop
-                            break #break out of for loop
-                    else:
-                        print('Nr. of scraped tweets reached limit, ending search...')
-                        scrolling = False #end outer while loop
-                        break #break out of for loop
+            if (len(data)<limit):
+                if (datetime.strptime(tweet[0], "%Y-%m-%dT%H:%M:%S.%fZ") > earliest_date):
+                    data.append(tweet)
+                    print(tweet)
                 else:
-                    pass
-            else:
-                if (len(data)<limit):
-                    if (datetime.strptime(tweet[0], "%Y-%m-%dT%H:%M:%S.%fZ") > earliest_date):
-                        tweet_id = tweet[0]+tweet[1] #concatenate handle and datetime to create unique identifier for tweet
-                        if tweet_id not in tweet_ids:
-                            tweet_ids.add(tweet_id)
-                            data.append(tweet)
-                            print(tweet)
-                    else:
-                        print('Earliest tweet datetime reached, ending search...')
-                        scrolling = False #end outer while loop
-                        break #break out of for loop
-                else:
-                    print('Nr. of scraped tweets reached limit, ending search...')
+                    print('Earliest tweet day reached, ending search...')
                     scrolling = False #end outer while loop
                     break #break out of for loop
+            else:
+                print('Nr. of scraped tweets reached limit, ending search...')
+                scrolling = False #end outer while loop
+                break #break out of for loop
+
 
 #Scroll down on webpage to load new tweets
     scroll_attempt = 0
