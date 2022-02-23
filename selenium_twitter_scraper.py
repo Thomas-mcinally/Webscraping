@@ -1,23 +1,20 @@
 '''
-selenium_twitter_scraper version 2.0
+selenium_twitter_scraper version 3.0
 
 Thomas Mcinally tuesday 22/02/2022 (two's day!)
 
 This module allows you to scrape all latest tweets by specifying:
 - Search term
 - Date to look for tweets since
-- Limit on nr. of tweets to scrape (gets most recent ones first)
-
-
-
-TODO (next version):
--Add language filter option 
+- Nr. of tweets to scrape (gets most recent ones first)
+- Language (english or all languages)
 
 '''
 #######################  INPUTS  #############################
 search_term = '#nyancat' #str
-since = '2022-02-22T00:00:00.000Z' #str e.g.'2000-01-01T00:00:00.000Z'
-limit = 5  #int
+since = '2022-02-20T00:00:00.000Z' #str e.g.'2000-01-01T00:00:00.000Z'
+limit = 20  #int
+only_english = True #bool
 
 twitter_username = 'YOUR_EMAIL'
 twitter_handle = 'YOUR_HANDLE' #used if twitter asks to verify identity with handle/phone number
@@ -106,25 +103,45 @@ scrolling = True
 
 while scrolling:
     page_cards = driver.find_elements(By.XPATH, '//article[@data-testid="tweet"]')
-    print('grabbing latest cards')
+    print('Grabbing latest cards...')
     for card in page_cards:
         tweet = get_tweet_data(card)
         if tweet:
-            if (len(data)<limit):
-                if (datetime.strptime(tweet[0], "%Y-%m-%dT%H:%M:%S.%fZ") > earliest_date):
-                    tweet_id = tweet[0]+tweet[1] #concatenate handle and datetime to create unique identifier for tweet
-                    if tweet_id not in tweet_ids:
-                        tweet_ids.add(tweet_id)
-                        data.append(tweet)
-                        print(tweet)
+            if only_english:
+                if tweet[3].isascii():
+                    if (len(data)<limit):
+                        if (datetime.strptime(tweet[0], "%Y-%m-%dT%H:%M:%S.%fZ") > earliest_date):
+                            tweet_id = tweet[0]+tweet[1] #concatenate handle and datetime to create unique identifier for tweet
+                            if tweet_id not in tweet_ids:
+                                tweet_ids.add(tweet_id)
+                                data.append(tweet)
+                                print(tweet)
+                        else:
+                            print('Earliest tweet day reached, ending search...')
+                            scrolling = False #end outer while loop
+                            break #break out of for loop
+                    else:
+                        print('Nr. of scraped tweets reached limit, ending search...')
+                        scrolling = False #end outer while loop
+                        break #break out of for loop
                 else:
-                    print('Earliest tweet day reached, ending search...')
+                    pass
+            else:
+                if (len(data)<limit):
+                    if (datetime.strptime(tweet[0], "%Y-%m-%dT%H:%M:%S.%fZ") > earliest_date):
+                        tweet_id = tweet[0]+tweet[1] #concatenate handle and datetime to create unique identifier for tweet
+                        if tweet_id not in tweet_ids:
+                            tweet_ids.add(tweet_id)
+                            data.append(tweet)
+                            print(tweet)
+                    else:
+                        print('Earliest tweet datetime reached, ending search...')
+                        scrolling = False #end outer while loop
+                        break #break out of for loop
+                else:
+                    print('Nr. of scraped tweets reached limit, ending search...')
                     scrolling = False #end outer while loop
                     break #break out of for loop
-            else:
-                print('Nr. of scraped tweets reached limit, ending search...')
-                scrolling = False #end outer while loop
-                break #break out of for loop
 
 #Scroll down on webpage to load new tweets
     scroll_attempt = 0
