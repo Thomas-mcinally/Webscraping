@@ -67,14 +67,12 @@ def get_tweet_data(card: WebElement) -> tuple:
 
     #only return tweets that are correct language and not already scraped
     if only_english:
-        if text.isascii():
-            if tweet_id not in tweet_ids:
+        if text.isascii() and tweet_id not in tweet_ids:
                 tweet_ids.add(tweet_id)
                 return tweet
-            else: 
-                return False
-        else:
+        else: 
             return False
+
 
     else:
         if tweet_id not in tweet_ids:
