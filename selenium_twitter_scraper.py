@@ -34,18 +34,21 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 
-#make sure selenium_driver is in PATH
-if ';C:\selenium_drivers' not in os.environ['PATH']:
-    os.environ['PATH'] += r';C:\selenium_drivers'
-
-#reformat date input from str to datetime
-earliest_date = datetime.strptime(since, "%Y-%m-%dT%H:%M:%S.%fZ")
 
 
 tweet_ids = set() #prevent scraping same tweet multiple times
 
-def get_tweet_data(card: WebElement) -> Tuple[tuple, str]:
-    '''Extract data from tweet card'''
+def get_tweet_data(card: WebElement) -> tuple:
+    '''
+    Extract data from tweet card
+
+            Parameters:
+                card (WebElement): Selenium webelement - the entire tweet. 
+
+            Returns:
+                tweet (tuple): A tuple that contains tweet postdate, handle, username
+                               text, reply count, retweet count, like count
+    '''
     username = card.find_element(By.XPATH, './/span').text
     handle = card.find_element(By.XPATH, './/span[contains(text(), "@")]').text
     try:
@@ -80,6 +83,11 @@ def get_tweet_data(card: WebElement) -> Tuple[tuple, str]:
         else:
             return False
 
+
+
+#make sure selenium_driver is in PATH
+if ';C:\selenium_drivers' not in os.environ['PATH']:
+    os.environ['PATH'] += r';C:\selenium_drivers'
 
 ##open browser, maximize window and zoom out to 33%
 driver = Chrome()
@@ -117,6 +125,9 @@ webElement = driver.find_element(By.XPATH, ("/html/body/div[1]/div/div/div[2]/ma
 driver.execute_script("arguments[0].click()", webElement) #workaround, works when zoomed out
 sleep(3)
 
+
+#reformat date input from str to datetime
+earliest_date = datetime.strptime(since, "%Y-%m-%dT%H:%M:%S.%fZ")
 
 ##grab all available tweets
 data = []
