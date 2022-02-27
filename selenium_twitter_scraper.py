@@ -99,15 +99,17 @@ sleep(3)
 ##navigate to twitter, login and search for search term
 driver.get('https://twitter.com/login')
 sleep(3)
+#username
 username = driver.find_element(By.XPATH,'/html/body/div/div/div/div[1]/div/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div/div[5]/label/div/div[2]/div/input')
 username.send_keys(twitter_username)
 username.send_keys(Keys.RETURN)
 sleep(3)
-#need this if promted to verify identity. Comment out if not
+#handle - need this if promted to verify identity. Comment out if not
 verify_username = driver.find_element(By.XPATH, '//*[@id="layers"]/div/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div/div[2]/label/div/div[2]/div/input')
 verify_username.send_keys(twitter_handle)
 verify_username.send_keys(Keys.RETURN)
 sleep(3)
+#password
 password = driver.find_element(By.XPATH, '//*[@id="layers"]/div/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div/div[3]/div/label/div/div[2]/div[1]/input')
 password.send_keys(twitter_password)
 password.send_keys(Keys.RETURN)
