@@ -10,15 +10,12 @@ This module allows you to scrape all latest tweets by specifying:
 - Language (english or all languages)
 
 '''
+
 #######################  INPUTS  #############################
 search_term = '#nyancat' #str
 since = '2022-02-20T00:00:00.000Z' #str e.g.'2000-01-01T00:00:00.000Z'
 limit = 20  #int
 only_english = True #bool
-
-twitter_username = 'YOUR EMAIL'
-twitter_handle = 'YOUR HANDLE' #used if twitter asks to verify identity with handle/phone number
-twitter_password = 'YOUR PASSWORD'
 ##############################################################
 
 
@@ -34,6 +31,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.remote.webelement import WebElement
 
+from config import my_twitter_handle, my_twitter_username, my_twitter_password
 
 
 tweet_ids = set() #prevent scraping same tweet multiple times
@@ -101,17 +99,17 @@ driver.get('https://twitter.com/login')
 sleep(3)
 #username
 username = driver.find_element(By.XPATH,'/html/body/div/div/div/div[1]/div/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div/div[5]/label/div/div[2]/div/input')
-username.send_keys(twitter_username)
+username.send_keys(my_twitter_username)
 username.send_keys(Keys.RETURN)
 sleep(3)
 #handle - need this if promted to verify identity. Comment out if not
 verify_username = driver.find_element(By.XPATH, '//*[@id="layers"]/div/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div/div[2]/label/div/div[2]/div/input')
-verify_username.send_keys(twitter_handle)
+verify_username.send_keys(my_twitter_handle)
 verify_username.send_keys(Keys.RETURN)
 sleep(3)
 #password
 password = driver.find_element(By.XPATH, '//*[@id="layers"]/div/div/div/div/div/div/div[2]/div[2]/div/div/div[2]/div[2]/div[1]/div/div[3]/div/label/div/div[2]/div[1]/input')
-password.send_keys(twitter_password)
+password.send_keys(my_twitter_password)
 password.send_keys(Keys.RETURN)
 sleep(3)
 #search for key word
